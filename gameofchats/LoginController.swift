@@ -155,7 +155,6 @@ class LoginController: UIViewController {
         }
         
         Auth.auth().signIn(withEmail: _email, password: _password) { [weak self] (user, error) in
-            
             if error != nil {
                 print(error)
                 return
