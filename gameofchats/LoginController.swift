@@ -68,11 +68,13 @@ class LoginController: UIViewController {
         return tf
     }()
     
-    let profileImageView: UIImageView = {
+    lazy var profileImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.image = UIImage(named: "logo")
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFill
+        imageView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleSelectProfileImageView)))
+        imageView.isUserInteractionEnabled = true
         return imageView
     }()
     
@@ -106,40 +108,6 @@ class LoginController: UIViewController {
         return .lightContent
     }
     
-    
-    func handleRegister() {
-        guard let _email = emailTextField.text, let _password = passwordTextField.text, let _name = nameTextField.text else {
-            print("Form is not valid")
-            return
-        }
-        
-        Auth.auth().createUser(withEmail: _email, password: _password) { (user, error) in
-            
-            if error != nil {
-                print(error!)
-                return
-            }
-            
-            guard let _uid = user?.uid else {
-                return
-            }
-            
-            // Successfully authenticated user
-            let DBRef = Database.database().reference(fromURL: "https://gameofchats-3f671.firebaseio.com/")
-            let usersReference = DBRef.child("users").child(_uid)
-            let values = ["name" : _name, "email": _email]
-            usersReference.updateChildValues(values, withCompletionBlock: { [weak self] (err, ref) in
-                
-                if err != nil {
-                    print(err!)
-                    return
-                }
-                
-                self?.dismiss(animated: true, completion: nil)
-            })
-        }
-    }
-    
     func handleLoginRegister() {
         if loginRegisterSegmentedControl.selectedSegmentIndex == 0 {
             handleLogin()
@@ -165,6 +133,7 @@ class LoginController: UIViewController {
         }
     }
     
+
     func handleLoginRegisterChange() {
         print(loginRegisterSegmentedControl.selectedSegmentIndex)
         let title = loginRegisterSegmentedControl.titleForSegment(at: loginRegisterSegmentedControl.selectedSegmentIndex)
