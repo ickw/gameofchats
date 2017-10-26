@@ -29,6 +29,7 @@ class NewMessageController: UITableViewController {
             
             if let dict = snapshot.value as? [String: AnyObject] {
                 let user = User()
+                user.id = snapshot.key
                 
                 // if you use this setter, your app will crash if your class properties don't exactly match up with your firebase dictionary keys
                 user.setValuesForKeys(dict)
@@ -59,23 +60,7 @@ class NewMessageController: UITableViewController {
         cell.detailTextLabel?.text = user.email
 
         if let profileImageUrl = user.profileImageUrl {
-            
             cell.profileImageView.loadImageUsingCacheWithUrlString(urlString: profileImageUrl)
-            
-//            let url = URL(string: profileImageUrl)
-//            URLSession.shared.dataTask(with: url!, completionHandler: { (data, response, error) in
-//                
-//                // Download hits an error so lets return out
-//                if error != nil {
-//                    print(error!)
-//                    return
-//                }
-//                
-//                DispatchQueue.main.async {
-//                    cell.profileImageView.image = UIImage(data: data!)
-//                }
-//                
-//            }).resume()
         }
         
         return cell
@@ -83,6 +68,16 @@ class NewMessageController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         return 72
+    }
+    
+    var messagesController: MessagesController?
+    
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        dismiss(animated: true) { 
+            print("dimiss completed")
+            let user = self.users[indexPath.row]
+            self.messagesController?.showChatControllerForUser(user: user)
+        }
     }
 }
 

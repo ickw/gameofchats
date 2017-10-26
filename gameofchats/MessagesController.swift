@@ -19,10 +19,32 @@ class MessagesController: UITableViewController {
         navigationItem.rightBarButtonItem = UIBarButtonItem(image: #imageLiteral(resourceName: "new_message_icon"), style: .plain, target: self, action: #selector(handleNewMessage))
         
         checkIfUserISLoggedIn()
+        
+        observeMessages()
+    }
+    
+    var messages = [Message]()
+    
+    func observeMessages() {
+        let ref = Database.database().reference().child("messages")
+        ref.observe(.childAdded, with: { (snapshot) in
+            
+            if let dict = snapshot.value as? [String: AnyObject] {
+                let message = Message()
+                message.setValuesForKeys(dict)
+                self.messages.append(message)
+                
+                DispatchQueue.main.async {
+                    self.tableView.reloadData()
+                }
+            }
+            
+        }, withCancel: nil)
     }
     
     func handleNewMessage() {
         let newMessageController = NewMessageController()
+        newMessageController.messagesController = self
         let navConroller = UINavigationController(rootViewController: newMessageController)
         present(navConroller, animated: true, completion: nil)
         
@@ -99,13 +121,13 @@ class MessagesController: UITableViewController {
         self.navigationItem.titleView = titleView
         
         
-        titleView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showChatController)))
+        //titleView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showChatController)))
     }
     
-    func showChatController() {
+    func showChatControllerForUser(user: User) {
         let chatLogController = ChatLogController(collectionViewLayout: UICollectionViewFlowLayout())
+        chatLogController.user = user
         navigationController?.pushViewController(chatLogController, animated: true)
-        
     }
 
     func handleLogout() {
@@ -119,6 +141,22 @@ class MessagesController: UITableViewController {
         loginController.messageController = self
         present(loginController, animated: true, completion: nil)
         
+    }
+    
+    
+    // MARK - UITableViewDelegate
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return messages.count
+    }
+    
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "cellId")
+        
+        let message = messages[indexPath.row]
+        cell.textLabel?.text = message.toId
+        cell.detailTextLabel?.text = message.text
+        
+        return cell
     }
 
 }
