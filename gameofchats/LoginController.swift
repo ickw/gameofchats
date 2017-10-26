@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import Firebase
 
 class LoginController: UIViewController {
     
@@ -19,12 +20,13 @@ class LoginController: UIViewController {
         return view
     }()
     
-    let loginRegisterButton: UIButton = {
+    lazy var loginRegisterButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor(r: 80, g: 101, b: 161)
         button.setTitle("Register", for: .normal)
         button.setTitleColor(.white, for: .normal)
         button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
+        button.addTarget(self, action: #selector(handleRegister), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
         
@@ -91,6 +93,40 @@ class LoginController: UIViewController {
     
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .lightContent
+    }
+    
+    func handleRegister() {
+        guard let _email = emailTextField.text, let _password = passwordTextField.text, let _name = nameTextField.text else {
+            print("Form is not valid")
+            return
+        }
+        
+        Auth.auth().createUser(withEmail: _email, password: _password) { (user, error) in
+            
+            if error != nil {
+                print(error!)
+                return
+            }
+            
+            guard let _uid = user?.uid else {
+                return
+            }
+            
+            // Successfully authenticated user
+            let DBRef = Database.database().reference(fromURL: "https://gameofchats-3f671.firebaseio.com/")
+            let usersReference = DBRef.child("users").child(_uid)
+            let values = ["name" : _name, "email": _email]
+            usersReference.updateChildValues(values, withCompletionBlock: { (err, ref) in
+                
+                if err != nil {
+                    print(err!)
+                    return
+                }
+                
+                print("Saved user successfully into Firebase db")
+            })
+            
+        }
     }
     
     func setupInputsContainerView() {
