@@ -13,21 +13,8 @@ class UserCell: UITableViewCell {
     
     var message: Message? {
         didSet {
-            if let toId = message?.toId {
-                let ref = Database.database().reference().child("users").child(toId)
-                ref.observeSingleEvent(of: .value, with: { [weak self] (snapshot) in
-                    
-                    if let dict = snapshot.value as? [String: AnyObject] {
-                        self?.textLabel?.text = dict["name"] as? String
-                        
-                        if let profileImageUrl = dict["profileImageUrl"] as? String{
-                            self?.profileImageView.loadImageUsingCacheWithUrlString(urlString: profileImageUrl)
-                        }
-                        
-                        
-                    }
-                })
-            }
+            
+            setupNameAndProfileImage()
             
             self.detailTextLabel?.text = message?.text
             
@@ -51,13 +38,38 @@ class UserCell: UITableViewCell {
     
     let timeLabel: UILabel = {
         let label = UILabel()
-        label.text = "HH:MM:SS"
+//        label.text = "HH:MM:SS"
         label.font = UIFont.systemFont(ofSize: 13)
         label.textColor = .darkGray
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
+    
+    private func setupNameAndProfileImage() {
+        let chatPartnerId: String?
+        if message?.fromId == Auth.auth().currentUser?.uid {
+            chatPartnerId = message?.toId
+        } else {
+            chatPartnerId = message?.fromId
+        }
+        
+        if let id = chatPartnerId {
+            let ref = Database.database().reference().child("users").child(id)
+            ref.observeSingleEvent(of: .value, with: { [weak self] (snapshot) in
+                
+                if let dict = snapshot.value as? [String: AnyObject] {
+                    self?.textLabel?.text = dict["name"] as? String
+                    
+                    if let profileImageUrl = dict["profileImageUrl"] as? String{
+                        self?.profileImageView.loadImageUsingCacheWithUrlString(urlString: profileImageUrl)
+                    }
+                    
+                    
+                }
+            })
+        }
+    }
     
     override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
         super.init(style: .subtitle, reuseIdentifier: reuseIdentifier)

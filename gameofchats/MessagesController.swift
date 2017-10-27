@@ -24,11 +24,47 @@ class MessagesController: UITableViewController {
         
         tableView.register(UserCell.self, forCellReuseIdentifier: cellId)
         
-        observeMessages()
+
     }
     
     var messages = [Message]()
     var messagesDictionary = [String: Message]()
+    
+    func observeUserMessages() {
+        
+        guard let uid = Auth.auth().currentUser?.uid else {
+            return
+        }
+        let ref = Database.database().reference().child("user-messages").child(uid)
+        ref.observe(.childAdded, with: { (snapshot) in
+            
+            let messageId = snapshot.key
+            let messageRef = Database.database().reference().child("messages").child(messageId)
+            messageRef.observeSingleEvent(of: .value, with: { (snapshot) in
+                
+                if let dict = snapshot.value as? [String: AnyObject] {
+                    let message = Message()
+                    message.setValuesForKeys(dict)
+                    
+                    if let toId = message.toId {
+                        self.messagesDictionary[toId] = message
+                        
+                        self.messages = Array(self.messagesDictionary.values)
+                        self.messages.sort( by: { (message1, message2) -> Bool in
+                            return (message1.timestamp?.intValue)! > (message2.timestamp?.intValue)!
+                        })
+                    }
+                    
+                    DispatchQueue.main.async {
+                        self.tableView.reloadData()
+                    }
+                }
+            })
+            
+        }) { (error) in
+            
+        }
+    }
     
     func observeMessages() {
         let ref = Database.database().reference().child("messages")
@@ -37,7 +73,6 @@ class MessagesController: UITableViewController {
             if let dict = snapshot.value as? [String: AnyObject] {
                 let message = Message()
                 message.setValuesForKeys(dict)
-                // self.messages.append(message)
                 
                 if let toId = message.toId {
                     self.messagesDictionary[toId] = message
@@ -48,9 +83,6 @@ class MessagesController: UITableViewController {
                     })
                 }
                 
-                
-                
-        
                 DispatchQueue.main.async {
                     self.tableView.reloadData()
                 }
@@ -96,6 +128,13 @@ class MessagesController: UITableViewController {
     }
     
     func setupNavBarWithUser(user: User) {
+        messages.removeAll()
+        messagesDictionary.removeAll()
+        tableView.reloadData()
+        
+        observeUserMessages()
+        
+        
         let titleView = UIView()
         titleView.frame = CGRect(x: 0, y: 0, width: 100, height: 40)
         // titleView.backgroundColor = .red
