@@ -9,12 +9,49 @@
 import UIKit
 import Firebase
 
-class ChatLogController: UICollectionViewController, UITextFieldDelegate {
+class ChatLogController: UICollectionViewController, UITextFieldDelegate, UICollectionViewDelegateFlowLayout {
+    
+    let cellId = "cellId"
     
     var user: User? {
         didSet {
             navigationItem.title = user?.name
+            
+            observeMessages()
         }
+    }
+    
+    var messages = [Message]()
+    
+    func observeMessages() {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            return
+        }
+        let userMessagesRef = Database.database().reference().child("user-messages").child(uid)
+        userMessagesRef.observe(.childAdded, with: { (snapshot) in
+            
+            let messageId = snapshot.key
+            let messagesRef = Database.database().reference().child("messages").child(messageId)
+            messagesRef.observeSingleEvent(of: .value, with: { [weak self] (snapshot) in
+                
+                
+                guard let dict = snapshot.value as? [String: AnyObject] else {
+                    return
+                }
+                let message = Message()
+                // potential of crash if keys dont match
+                message.setValuesForKeys(dict)
+                
+                if message.chatPartnerId() == self?.user?.id {
+                    self?.messages.append(message)
+                }
+            
+                DispatchQueue.main.async {
+                    self?.collectionView?.reloadData()
+                }
+                
+            })
+        })
     }
     
     lazy var inputTextField: UITextField = {
@@ -29,6 +66,8 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        collectionView?.alwaysBounceVertical = true
+        collectionView?.register(ChatMessageCell.self, forCellWithReuseIdentifier: cellId)
         collectionView?.backgroundColor = .white
         
         setupInputComponents()
@@ -36,7 +75,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate {
     
     func setupInputComponents() {
         let containerView = UIView()
-        //containerView.backgroundColor = .white
+        containerView.backgroundColor = .white
         containerView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerView)
         // ios 9 constraints anchors 
@@ -80,7 +119,6 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate {
     func handleSend() {
         let ref = Database.database().reference().child("messages")
         let childRef = ref.childByAutoId()
-        // Is it the best thing to include the name inside of the message node?
         let toId = user!.id!
         let fromId = Auth.auth().currentUser!.uid
         let timestamp = Int(NSDate().timeIntervalSince1970)
@@ -109,5 +147,26 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate {
         handleSend()
         return true
     }
+    
+    
+    // MARK: - UICollectionViewDelegate
+
+    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return messages.count
+    }
+    
+    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellId, for: indexPath) as! ChatMessageCell
+        let message = messages[indexPath.item]
+        cell.textView.text = message.text
+        
+        return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        return CGSize(width: view.frame.width, height: 80)
+    }
+    
+    
     
 }
