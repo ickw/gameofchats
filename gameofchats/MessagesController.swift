@@ -56,9 +56,7 @@ class MessagesController: UITableViewController {
                     }
                     
                     self.timer?.invalidate()
-                    print("we just canceled our timer")
                     self.timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.handleReloadTable), userInfo: nil, repeats: false)
-                    print("schedule a relaod in 0.1 sec")
                 }
             })
             
@@ -71,7 +69,6 @@ class MessagesController: UITableViewController {
     
     func handleReloadTable() {
         DispatchQueue.main.async {
-            print("we reloaded table")
             self.tableView.reloadData()
         }
     }
