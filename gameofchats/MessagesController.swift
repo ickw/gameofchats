@@ -55,9 +55,10 @@ class MessagesController: UITableViewController {
                         })
                     }
                     
-                    DispatchQueue.main.async {
-                        self.tableView.reloadData()
-                    }
+                    self.timer?.invalidate()
+                    print("we just canceled our timer")
+                    self.timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.handleReloadTable), userInfo: nil, repeats: false)
+                    print("schedule a relaod in 0.1 sec")
                 }
             })
             
@@ -66,29 +67,13 @@ class MessagesController: UITableViewController {
         }
     }
     
-    func observeMessages() {
-        let ref = Database.database().reference().child("messages")
-        ref.observe(.childAdded, with: { (snapshot) in
-            
-            if let dict = snapshot.value as? [String: AnyObject] {
-                let message = Message()
-                message.setValuesForKeys(dict)
-                
-                if let toId = message.toId {
-                    self.messagesDictionary[toId] = message
-                    
-                    self.messages = Array(self.messagesDictionary.values)
-                    self.messages.sort( by: { (message1, message2) -> Bool in
-                        return (message1.timestamp?.intValue)! > (message2.timestamp?.intValue)!
-                    })
-                }
-                
-                DispatchQueue.main.async {
-                    self.tableView.reloadData()
-                }
-            }
-            
-        }, withCancel: nil)
+    var timer: Timer?
+    
+    func handleReloadTable() {
+        DispatchQueue.main.async {
+            print("we reloaded table")
+            self.tableView.reloadData()
+        }
     }
     
     func handleNewMessage() {
