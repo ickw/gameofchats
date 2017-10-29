@@ -24,10 +24,11 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     var messages = [Message]()
     
     func observeMessages() {
-        guard let uid = Auth.auth().currentUser?.uid else {
+        guard let uid = Auth.auth().currentUser?.uid, let toId = user?.id else {
             return
         }
-        let userMessagesRef = Database.database().reference().child("user-messages").child(uid)
+    
+        let userMessagesRef = Database.database().reference().child("user-messages").child(uid).child(toId)
         userMessagesRef.observe(.childAdded, with: { (snapshot) in
             
             let messageId = snapshot.key
@@ -41,14 +42,12 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
                 // potential of crash if keys dont match
                 message.setValuesForKeys(dict)
                 
-                if message.chatPartnerId() == self?.user?.id {
-                    self?.messages.append(message)
-                }
-            
+                // Do we need to attempt filitering anymoree?
+                self?.messages.append(message)
+
                 DispatchQueue.main.async {
                     self?.collectionView?.reloadData()
                 }
-                
             })
         })
     }
@@ -215,8 +214,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         let fromId = Auth.auth().currentUser!.uid
         let timestamp = Int(NSDate().timeIntervalSince1970)
         let values = ["text": inputTextField.text!, "toId" : toId, "fromId" : fromId, "timestamp": timestamp] as [String : Any]
-//        childRef.updateChildValues(values)
-        
+
         childRef.updateChildValues(values) { [weak self] (error, ref) in
             if error != nil {
                 print(error!)
@@ -225,11 +223,13 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             
             self?.inputTextField.text = nil
             
-            let userMessagesRef = Database.database().reference().child("user-messages").child(fromId)
+            // (FromId)(ToId) & (ToId)(FromId) nodes are synced
+            let userMessagesRef = Database.database().reference().child("user-messages").child(fromId).child(toId)
+            
             let messageId = childRef.key
             userMessagesRef.updateChildValues([messageId :1])
-            
-            let recipientUserMessagesRef = Database.database().reference().child("user-messages").child(toId)
+        
+            let recipientUserMessagesRef = Database.database().reference().child("user-messages").child(toId).child(fromId)
             recipientUserMessagesRef.updateChildValues([messageId :1])
         }
     }
